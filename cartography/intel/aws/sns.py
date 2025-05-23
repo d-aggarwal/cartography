@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -9,6 +10,7 @@ import neo4j
 from cartography.client.core.tx import load
 from cartography.graph.job import GraphJob
 from cartography.models.aws.sns.topic import SNSTopicSchema
+from cartography.models.aws.sns.topic_subscription import SNSTopicSubscriptionSchema
 from cartography.stats import get_stats_client
 from cartography.util import aws_handle_regions
 from cartography.util import merge_module_sync_metadata
@@ -109,12 +111,70 @@ def load_sns_topics(
 
 
 @timeit
+@aws_handle_regions
+def get_subscriptions(boto3_session: boto3.session.Session, region: str) -> List[Dict]:
+    """
+    Get all SNS Topics Subscriptions for a region.
+    """
+    client = boto3_session.client("sns", region_name=region)
+    paginator = client.get_paginator("list_subscriptions")
+    subscriptions = []
+    for page in paginator.paginate():
+        subscriptions.extend(page.get("Subscriptions", []))
+
+    return subscriptions
+
+
+@timeit
+@aws_handle_regions
+def get_subscription_attributes(
+    boto3_session: boto3.session.Session, region: str, subscription_arn: Any
+) -> Dict[str, str]:
+    """
+    Get all SNS  Subscriptions attributes for a region.
+    """
+    client = boto3_session.client("sns", region_name=region)
+    attributes = client.get_subscription_attributes(SubscriptionArn=subscription_arn)
+    return attributes.get("Attributes", {})
+
+
+@timeit
+def load_sns_topic_subscription(
+    neo4j_session: neo4j.Session,
+    data: List[Dict[str, Any]],
+    region: str,
+    aws_account_id: str,
+    update_tag: int,
+) -> None:
+    """
+    Load SNS Topic Subscription information into the graph
+    """
+    logger.info(
+        f"Loading {len(data)} SNS topic subscription for region {region} into graph."
+    )
+
+    load(
+        neo4j_session,
+        SNSTopicSubscriptionSchema(),
+        data,
+        lastupdated=update_tag,
+        Region=region,
+        AWS_ID=aws_account_id,
+    )
+
+
+@timeit
 def cleanup_sns(neo4j_session: neo4j.Session, common_job_parameters: Dict) -> None:
     """
     Run SNS cleanup job
     """
     logger.debug("Running SNS cleanup job.")
     cleanup_job = GraphJob.from_node_schema(SNSTopicSchema(), common_job_parameters)
+    cleanup_job.run(neo4j_session)
+
+    cleanup_job = GraphJob.from_node_schema(
+        SNSTopicSubscriptionSchema(), common_job_parameters
+    )
     cleanup_job.run(neo4j_session)
 
 
@@ -128,7 +188,7 @@ def sync(
     common_job_parameters: Dict,
 ) -> None:
     """
-    Sync SNS Topics for all regions
+    Sync SNS Topics and Subscriptions for all regions
     """
     for region in regions:
         logger.info(
@@ -153,9 +213,26 @@ def sync(
             update_tag,
         )
 
+        # Get and load subscriptions
+        subscriptions = get_subscriptions(boto3_session, region)
+
+        subscription_arn = subscriptions[0].get("SubscriptionArn")
+        attributes = get_subscription_attributes(
+            boto3_session, region, subscription_arn
+        )
+        if attributes:
+            # Pass a single subscription dict, NOT a list
+            load_sns_topic_subscription(
+                neo4j_session,
+                [attributes],  # just one dict, not a list
+                region,
+                current_aws_account_id,
+                update_tag,
+            )
+
+    # Cleanup and metadata update (outside region loop)
     cleanup_sns(neo4j_session, common_job_parameters)
 
-    # Record that we've synced this module
     merge_module_sync_metadata(
         neo4j_session,
         group_type="AWSAccount",
