@@ -112,7 +112,9 @@ def load_sns_topics(
 
 @timeit
 @aws_handle_regions
-def get_subscriptions(boto3_session: boto3.session.Session, region: str) -> List[Dict]:
+def get_subscriptions(
+    boto3_session: boto3.session.Session, region: str
+) -> List[Dict[str, Any]]:
     """
     Get all SNS Topics Subscriptions for a region.
     """
@@ -129,13 +131,50 @@ def get_subscriptions(boto3_session: boto3.session.Session, region: str) -> List
 @aws_handle_regions
 def get_subscription_attributes(
     boto3_session: boto3.session.Session, region: str, subscription_arn: Any
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     """
     Get all SNS  Subscriptions attributes for a region.
     """
     client = boto3_session.client("sns", region_name=region)
-    attributes = client.get_subscription_attributes(SubscriptionArn=subscription_arn)
-    return attributes.get("Attributes", {})
+    response = client.get_subscription_attributes(SubscriptionArn=subscription_arn)
+    return response.get("Attributes", {})
+
+
+def transform_subscriptions(
+    subscriptions: List[Dict], attributes: Dict[Any, Dict], region: str
+) -> List[Dict]:
+    """
+    Transform SNS topic subscriptions data for ingestion
+    """
+    transformed_subscriptions = []
+    for subscription in subscriptions:
+        subscription_arn = subscription["SubscriptionArn"]
+
+        # Get attributes
+        subscription_attrs = attributes.get(subscription_arn, {}).get("Attributes", {})
+
+        transformed_subscription = {
+            "SubscriptionArn": subscription_arn,
+            "TopicArn": subscription.get("TopicArn", ""),
+            "ConfirmationWasAuthenticated": subscription_attrs.get(
+                "ConfirmationWasAuthenticated", ""
+            ),
+            "DeliveryPolicy": subscription_attrs.get("DeliveryPolicy", ""),
+            "EffectiveDeliveryPolicy": subscription_attrs.get(
+                "EffectiveDeliveryPolicy", ""
+            ),
+            "FilterPolicy": subscription_attrs.get("FilterPolicy", ""),
+            "FilterPolicyScope": subscription_attrs.get("FilterPolicyScope", ""),
+            "Owner": subscription_attrs.get("Owner", ""),
+            "PendingConfirmation": subscription_attrs.get("PendingConfirmation", ""),
+            "RawMessageDelivery": subscription_attrs.get("RawMessageDelivery", ""),
+            "RedrivePolicy": subscription_attrs.get("RedrivePolicy", ""),
+            "SubscriptionRoleArn": subscription_attrs.get("SubscriptionRoleArn", ""),
+        }
+
+        transformed_subscriptions.append(transformed_subscription)
+
+    return transformed_subscriptions
 
 
 @timeit
@@ -215,20 +254,29 @@ def sync(
 
         # Get and load subscriptions
         subscriptions = get_subscriptions(boto3_session, region)
+        subscription_attributes = {}
 
-        subscription_arn = subscriptions[0].get("SubscriptionArn")
-        attributes = get_subscription_attributes(
-            boto3_session, region, subscription_arn
-        )
-        if attributes:
-            # Pass a single subscription dict, NOT a list
-            load_sns_topic_subscription(
-                neo4j_session,
-                [attributes],  # just one dict, not a list
-                region,
-                current_aws_account_id,
-                update_tag,
+        for subscription in subscriptions:
+            subscription_arn = subscription.get("SubscriptionArn")
+
+            attributes = get_subscription_attributes(
+                boto3_session, region, subscription_arn
             )
+
+            if attributes:
+                subscription_attributes[subscription_arn] = attributes
+
+        transformed_subscriptions = transform_subscriptions(
+            subscriptions, subscription_attributes, region
+        )
+
+        load_sns_topic_subscription(
+            neo4j_session,
+            transformed_subscriptions,
+            region,
+            current_aws_account_id,
+            update_tag,
+        )
 
     # Cleanup and metadata update (outside region loop)
     cleanup_sns(neo4j_session, common_job_parameters)
