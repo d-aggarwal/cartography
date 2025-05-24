@@ -26,8 +26,8 @@ LIST_SUBSCRIPTIONS = [
     }
 ]
 
-GET_SUBSCRIPTION_ATTRIBUTES = [
-    {
+GET_SUBSCRIPTION_ATTRIBUTES = {
+    "Attributes": {
         "SubscriptionArn": "arn:aws:sns:us-east-1:123456789012:my-topic:1111aaaa-2222-bbbb-3333-cccc4444dddd",
         "TopicArn": "arn:aws:sns:us-east-1:123456789012:my-topic",
         "ConfirmationWasAuthenticated": "true",
@@ -41,4 +41,4 @@ GET_SUBSCRIPTION_ATTRIBUTES = [
         "RedrivePolicy": '{"deadLetterTargetArn":"arn:aws:sqs:us-east-1:123456789012:my-dlq"}',
         "SubscriptionRoleArn": "arn:aws:iam::123456789012:role/firehose-role",
     }
-]
+}
