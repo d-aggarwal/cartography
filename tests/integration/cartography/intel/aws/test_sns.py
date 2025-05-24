@@ -28,7 +28,7 @@ TEST_UPDATE_TAG = 123456789
 @patch.object(
     cartography.intel.aws.sns,
     "get_subscription_attributes",
-    return_value=GET_SUBSCRIPTION_ATTRIBUTES[0],
+    return_value=GET_SUBSCRIPTION_ATTRIBUTES,
 )
 def test_sync_sns(
     mock_get_subscription_attributes,
