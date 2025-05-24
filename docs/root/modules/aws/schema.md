@@ -3325,6 +3325,8 @@ Representation of an AWS [SNS Topic Subscription](https://docs.aws.amazon.com/sn
 
 | Field | Description |
 |-------|-------------|
+| firstseen| Timestamp of when a sync job first discovered this node |
+| lastupdated | Timestamp of the last time the node was updated |
 | **id** | The ARN of the SNS topic subscription |
 | **arn** | The Amazon Resource Name (ARN) of the topic subscription |
 | topic_arn | The topic ARN that the subscription is associated with |
