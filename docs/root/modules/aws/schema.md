@@ -769,7 +769,19 @@ Representation of an AWS [CloudTrail Trail](https://docs.aws.amazon.com/awscloud
 | s3_bucket_name | The Amazon S3 bucket name where the CloudTrailTrail delivers files. |
 | s3_key_prefix | The S3 key prefix used after the bucket name for the CloudTrailTrail's log files. |
 | sns_topic_arn | The ARN of the SNS topic used by the CloudTrailTrail for delivery notifications. |
-
+#### Relationships
+- CloudTrailTrail are a resource under the AWS Account.
+    ```
+    (AWSAccount)-[RESOURCE]->(CloudTrailTrail)
+    ```
+    CloudTrailTrail may be encrypted by an AWS KMS Key.
+    ```
+    (CloudTrailTrail)-[ENCRYPTED_BY]->(KMSKey)
+    ```
+    CloudTrailTrail can send logs to CloudWatchLogGroup.
+    ```
+    (CloudTrailTrail)-[SEND_LOGS_TO]->(CloudWatchLogGroup)
+    ```
 
 ### CloudWatchLogGroup
 Representation of an AWS [CloudWatch Log Group](https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_LogGroup.html)
@@ -792,6 +804,10 @@ Representation of an AWS [CloudWatch Log Group](https://docs.aws.amazon.com/Amaz
 - CLoudWatch LogGroups are a resource under the AWS Account.
     ```
     (AWSAccount)-[RESOURCE]->(CloudWatchLogGroup)
+    ```
+    CLoudWatch LogGroups may be encrypted by an AWS KMS Key.
+    ```
+    (CloudWatchLogGroup)-[ENCRYPTED_BY]->(KMSKey)
     ```
 
 ### DBSubnetGroup
