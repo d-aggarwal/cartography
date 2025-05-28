@@ -805,7 +805,7 @@ Representation of an AWS [CloudWatch Log Group](https://docs.aws.amazon.com/Amaz
     ```
     (AWSAccount)-[RESOURCE]->(CloudWatchLogGroup)
     ```
-    CLoudWatch LogGroups may be encrypted by an AWS KMS Key.
+    CloudWatch LogGroups may be encrypted by an AWS KMS Key.
     ```
     (CloudWatchLogGroup)-[ENCRYPTED_BY]->(KMSKey)
     ```
