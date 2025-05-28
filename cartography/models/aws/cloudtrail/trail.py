@@ -90,8 +90,8 @@ class CloudTrailTrailToCloudWatchLogGroupRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "SEND_LOGS_TO"
-    properties: CloudTrailTrailToKMSKeyRelProperties = (
-        CloudTrailTrailToKMSKeyRelProperties()
+    properties: CloudTrailTrailToCloudWatchLogGroupRelProperties = (
+        CloudTrailTrailToCloudWatchLogGroupRelProperties()
     )
 
 
