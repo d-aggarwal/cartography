@@ -770,7 +770,7 @@ Representation of an AWS [CloudTrail Trail](https://docs.aws.amazon.com/awscloud
 | s3_key_prefix | The S3 key prefix used after the bucket name for the CloudTrailTrail's log files. |
 | sns_topic_arn | The ARN of the SNS topic used by the CloudTrailTrail for delivery notifications. |
 #### Relationships
-- CloudTrailTrail are a resource under the AWS Account.
+- CloudTrailTrail is a resource under the AWS Account.
     ```
     (AWSAccount)-[RESOURCE]->(CloudTrailTrail)
     ```
